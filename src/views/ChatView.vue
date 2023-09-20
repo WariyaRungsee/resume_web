@@ -1,58 +1,104 @@
 <script setup>
-import { onMounted ,ref} from "vue";
+import { onMounted, onUpdated, ref, watch } from 'vue';
 import {
-  app,
-  auth,
-  database,
-  ref as refDb,
-  set,
-  push
-} from '../firebaseConfig'
+    app,
+    auth,
+    database,
+    ref as refDb,
+    set,
+    push,
+    onValue
+} from '../firebaseconfig'
+// import { DataSnapshot } from '@firebase/database';
+
 let chat = ref("");
+let histories = ref([]);
+let historykey = ref(""); //collect select group
+const bottomEl = ref(null);
 const studentId = "6314110013"
+let refChat;
+const db = refDb(database, 'all_chat/')
+
 const onSend = () => {
-    push(refDb(database, 'all_chat/group_/1'),{
-        "user":studentId,
+    if (chat.value != '' && historykey.value !=''){
+        push(refDb(database, `all_chat/${historykey.value}`), {
+        "user": studentId,
         "message": chat.value,
         "dateTime": new Date().toISOString()
     });
-    chat.value ="";
+    chat.value = "";
+
+    }
     
+
 }
+
+onValue(db, (snapshot) => {
+    const data = snapshot.val();
+    histories.value = data;
+})
+// watch(histories, (newHistories, oldHistories) => {
+//     bottonEl.value.scrollIntoView({ behavior: 'smooth' });
+// });
+
+onUpdated(() => {
+    bottomEl.value.scrollIntoView({ behavior: 'smooth' });
+});
+
+const selectGroup = (key) => {
+    historykey.value = key;
+}
+
 
 // onMounted(() => {
 //     push(refDb(database,'test'), {
-//     "6314110013": "Hello World"
+//     "6314110020": "Hello World"
 //   });
 // });
+
 </script>
+ 
 
 <template>
-  <div class="flex">
-    <div class="overflow-y-scroll bg-white h-[90vh] w-[30%]">
-      <div
-        class="w-full bg-[#EDD7FA] h-36 border-pink-400 border-4"
-        v-for="i in 100" :key="i"
-      ></div>
-      <!-- <p v-for="i in 100" :key="i">test</p> -->
-    </div>
+    <div class="flex">
+        <div class="overflow-y-scroll bg-[#F5F5F5] h-[90vh] w-[30%]">
+            
+                <div class="card card-side bg-base-100 shadow-xl w-full mb-4"
+                style="cursor: pointer;"
+                v-for="(group, index) in histories"
+                :key="index"
+                @click="$event => selectGroup(index)">
+               
+            <div class="card-body">
+                
+                <h2 class="card-title">{{ index }}</h2>
+                <p>{{ group[Object.keys(group)[Object.keys(group).length -1]].message }}</p>
+            </div>
+        </div>
+        </div>
+        <div class=" bg-gray-50 h-[90vh] w-[70%] ">
+            <div class="overflow-y-scroll h-[90%]">
+                
+                <div v-for="(history, index) in histories[historykey]"
+                    :class="`chat ${history.user == studentId ? 'chat-end' : 'chat-start'}`" :key="index">
+                    
+                    <div class="chat-header">{{ history.user }}
+                        <time class="text-xs opacity-50">{{ history.dateTime }}</time>
+                    </div>
+                    <div class="chat-bubble">{{ history.message }}</div>
+                </div>
 
-    <div class="bg-gray-50 h-[90vh] w-[70%]">
-      <div class="overflow-y-scroll h-[90%]">
-        <!-- <p v-for="i in 100" :key="i">test</p> -->
-        <div class="chat chat-start">
-          <div class="chat-bubble chat-bubble-info">It's over Anakin, <br />I have the high ground.
-          </div>
+                <div ref="bottomEl"></div>
+            </div>
+
+            <div class="flex h-[10%] gap-4">
+                <input v-on:keyup.enter="onSend" v-model="chat" type="text" placeholder="Type here"
+                    class="input input-bordered w-[80%] h-full" />
+                <!-- <button class="w-[20%] btn h-full"  v-on:click="onSend()" >send</button> -->
+                <button @click="onSend" class="w-[20%] btn h-full">send</button>
+
+            </div>
         </div>
-        <div class="chat chat-end">
-          <div class="chat-bubble chat-bubble-info">You underestimate my power!</div>
-        </div>
-      </div>
-      <div class="flex h-[10%] gap-4">
-        <input v-on:keyup.enter="onSend"  v-model="chat" type="text" placeholder="Typer here" class="input input-bordered w-[80%] h-full"/>
-        <button @click="onSend" class="w-[20%] btn h-full">send</button>
-      </div>
     </div>
-  </div>
 </template>
 <style scoped></style>

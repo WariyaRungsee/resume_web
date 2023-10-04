@@ -7,7 +7,9 @@ import {
     ref as refDb,
     set,
     push,
-    onValue
+    onValue,
+    child,
+    get
 } from '../firebaseconfig'
 // import { DataSnapshot } from '@firebase/database';
 
@@ -27,14 +29,11 @@ const onSend = () => {
             "dateTime": new Date().toISOString()
         });
         chat.value = "";
-
     }
-
-
 }
 
 onValue(db, (snapshot) => {
-    const data = snapshot.val();
+    const data = snapshot.val () ?? [];
     histories.value = data;
 })
 // watch(histories, (newHistories, oldHistories) => {
@@ -51,12 +50,22 @@ const selectGroup = (key) => {
 let groupChatName = ref("");
 const createGroup = () =>{
     if (groupChatName.value != ''){
-        push(refDb(database, `all_chat/${groupChatName.value}`),{
-            "user": studentId,
-            "message": '',
-            "dateTime": new Date().toISOString()
+        get(child(db, `${groupChatName.value}`)).then((snapshot) =>{
+            if(snapshot.exists()){
+                alert("Cannot create chat because chat is exists.")
+            } else {
+                push(refDb(database, `all_chat/${groupChatName.value}`),{
+                     "user": studentId,
+                     "message": '',
+                     "dateTime": new Date().toISOString()
         });
+       
+        }
         groupChatName.value='';
+        }).catch((err) => {
+            console.error(err);
+        })
+   
     }
 }
 
@@ -67,26 +76,14 @@ const deleteGroup = (key) => {
         const groupRef = refDb(database, `all_chat/${key}`);
         set(groupRef, null); // ลบข้อมูลทั้งกลุ่ม
 
-        // ลบกลุ่มที่ถูกเลือกออกจาก `histories`
-        histories.value = histories.value.filter((group, index) => index !== key);
-
         // เลือกกลุ่มใหม่หลังการลบ
-        if (historykey.value === key) {
-            historykey.value = '';
-        }
+        // if (historykey.value === key) {
+        //     historykey.value = '';
+        // }
     }
 };
 
-
-
-// onMounted(() => {
-//     push(refDb(database,'test'), {
-//     "6314110020": "Hello World"
-//   });
-// });
-
 </script>
- 
 
 <template>
     <div class="flex">
@@ -96,21 +93,21 @@ const deleteGroup = (key) => {
                     v-for="(group, index) in histories" :key="index" @click="$event => selectGroup(index)">
 
                     <div class="card-body">
-
+ 
                         <h2 class="card-title">{{ index }}</h2>
-                        <p>{{ group[Object.keys(group)[Object.keys(group).length - 1]].message }}</p>
+                        <p>{{ group[Object.keys(group)[Object.keys(group).length - 1]]?.message }}</p> 
                         <!-- <button class="btn btn-square btn-error" @click="deleteGroup(index)">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button> -->
+                        </button>
+                        <button @click="deleteGroup(index)" class="btn rounded-full">Delete</button>  -->
+
                         
-
-                        <!-- <button @click="deleteGroup(index)" class="btn rounded-full">Delete</button> -->
-
                         <div style="display: flex; justify-content: flex-end;">
                         <button class="btn btn-square btn-error" @click="deleteGroup(index)">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
-                        </div>
+                        </div> 
 
                     </div>
                 </div>
